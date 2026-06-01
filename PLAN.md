@@ -135,7 +135,7 @@ Schwierigkeitsgrad wird im HomeScreen gewählt und per Navigation-Parameter übe
 - [x] **Schritt 9:** Sound-Integration (expo-av)
 - [x] **Schritt 10:** Highscore-Speicherung + Settings-Persistenz
 - [x] **Schritt 11:** Styling & UI-Polishing (dunkles Retro-Theme)
-- [~] **Schritt 12:** Commit & Push auf Feature-Branch
+- [x] **Schritt 12:** Commit & Push auf Feature-Branch
 
 ---
 
