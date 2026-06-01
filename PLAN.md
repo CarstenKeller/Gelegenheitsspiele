@@ -124,18 +124,18 @@ Schwierigkeitsgrad wird im HomeScreen gewählt und per Navigation-Parameter übe
 
 ## Implementierungsschritte
 
-- [ ] **Schritt 1:** Expo-Projekt initialisieren (`create-expo-app`), Abhängigkeiten installieren
-- [ ] **Schritt 2:** Navigation einrichten (Stack: Home → SpaceInvaders)
-- [ ] **Schritt 3:** `storage.js` – AsyncStorage-Helper (Highscore lesen/schreiben, Settings)
-- [ ] **Schritt 4:** `HomeScreen.js` – Menü mit Spielkachel, Settings, Highscore-Anzeige
-- [ ] **Schritt 5:** `GameController.js` – Touch-Controller-Komponente
-- [ ] **Schritt 6:** `SpaceInvadersScreen.js` – Grundgerüst: Spielfeld, HUD, Game-Loop-Rahmen
-- [ ] **Schritt 7:** Space Invaders – Spielmechanik: Spieler, Invader-Grid, Bewegung
-- [ ] **Schritt 8:** Space Invaders – Schüsse + Kollisionserkennung + Leben/Game-Over
-- [ ] **Schritt 9:** Sound-Integration (expo-av)
-- [ ] **Schritt 10:** Highscore-Speicherung + Settings-Persistenz
-- [ ] **Schritt 11:** Styling & UI-Polishing (dunkles Retro-Theme)
-- [ ] **Schritt 12:** Commit & Push auf Feature-Branch
+- [x] **Schritt 1:** Expo-Projekt initialisieren (`create-expo-app`), Abhängigkeiten installieren
+- [x] **Schritt 2:** Navigation einrichten (Stack: Home → SpaceInvaders)
+- [x] **Schritt 3:** `storage.js` – AsyncStorage-Helper (Highscore lesen/schreiben, Settings)
+- [x] **Schritt 4:** `HomeScreen.js` – Menü mit Spielkachel, Settings, Highscore-Anzeige
+- [x] **Schritt 5:** `GameController.js` – Touch-Controller-Komponente
+- [x] **Schritt 6:** `SpaceInvadersScreen.js` – Grundgerüst: Spielfeld, HUD, Game-Loop-Rahmen
+- [x] **Schritt 7:** Space Invaders – Spielmechanik: Spieler, Invader-Grid, Bewegung
+- [x] **Schritt 8:** Space Invaders – Schüsse + Kollisionserkennung + Leben/Game-Over
+- [x] **Schritt 9:** Sound-Integration (expo-av)
+- [x] **Schritt 10:** Highscore-Speicherung + Settings-Persistenz
+- [x] **Schritt 11:** Styling & UI-Polishing (dunkles Retro-Theme)
+- [~] **Schritt 12:** Commit & Push auf Feature-Branch
 
 ---
 
