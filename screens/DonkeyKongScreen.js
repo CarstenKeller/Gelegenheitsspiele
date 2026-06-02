@@ -24,8 +24,11 @@ import { getHighscore, saveHighscore } from '../utils/storage';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const ANIM_INTERVAL = 180; // ms between walk animation frames
-const GIRDER_COLOR = '#cc4400';
-const LADDER_COLOR = '#ddbb00';
+const GIRDER_TOP    = '#ff7722'; // bright orange top face
+const GIRDER_FRONT  = '#cc4400'; // darker front face
+const GIRDER_SHADE  = '#882200'; // shadow
+const LADDER_RAIL   = '#ddbb00';
+const LADDER_RUNG   = '#ffee44';
 const PLATFORM_COUNT = PLATFORMS.length;
 
 function overlap(ax, ay, aw, ah, bx, by, bw, bh) {
@@ -89,9 +92,13 @@ export default function DonkeyKongScreen({ navigation, route }) {
   const { soundEnabled = true, playerName = '', handedness = 'right' } = route.params ?? {};
 
   // ── intro state ──────────────────────────────────────────────────────────
-  const [phase, setPhase] = useState('loading'); // loading|title|climb|taunt|playing|gameover|win
-  const [kongIntroY, setKongIntroY] = useState(FIELD_H);
+  // phases: loading → title → mariorun → climb → taunt → playing | gameover | win
+  const [phase, setPhase] = useState('loading');
+  const [kongIntroX, setKongIntroX] = useState(-KONG_W_PX);
+  const [kongIntroY, setKongIntroY] = useState(FIELD_H - MARIO_H_PX - KONG_H_PX);
   const [kongIntroPhase, setKongIntroPhase] = useState(0);
+  const [marioIntroX, setMarioIntroX] = useState(-MARIO_W_PX);
+  const [marioIntroPhase, setMarioIntroPhase] = useState(0);
   const [princessVisible, setPrincessVisible] = useState(false);
   const [introText, setIntroText] = useState('');
   const [hiScore, setHiScore] = useState(0);
@@ -130,41 +137,74 @@ export default function DonkeyKongScreen({ navigation, route }) {
   useEffect(() => {
     if (phase === 'title') {
       play('dk_intro');
-      const t = setTimeout(() => setPhase('climb'), 2200);
+      const t = setTimeout(() => setPhase('mariorun'), 2000);
       return () => clearTimeout(t);
     }
-    if (phase === 'climb') {
-      // Animate Kong climbing from bottom to top
-      let y = FIELD_H + KONG_H_PX;
-      let ph = 0;
-      const target = KONG_Y;
-      const interval = setInterval(() => {
-        y -= 5;
-        ph = (ph + 1) % 2;
-        setKongIntroY(y);
-        setKongIntroPhase(ph);
-        if (y <= target) {
-          clearInterval(interval);
-          setKongIntroY(target);
-          setPrincessVisible(true);
-          setPhase('taunt');
+
+    if (phase === 'mariorun') {
+      // Mario runs in from left on bottom platform
+      let mx = -MARIO_W_PX;
+      let mph = 0;
+      const marioTarget = MARIO_START_X + 20;
+      const iv = setInterval(() => {
+        mx += 3;
+        mph = (mph + 1) % 2;
+        setMarioIntroX(mx);
+        setMarioIntroPhase(mph);
+        if (mx >= marioTarget) {
+          clearInterval(iv);
+          setPhase('climb');
         }
       }, 40);
-      return () => clearInterval(interval);
+      return () => clearInterval(iv);
     }
+
+    if (phase === 'climb') {
+      // Kong runs in from left on bottom platform, then climbs to top
+      let kx = -KONG_W_PX;
+      let ky = PLATFORMS[0].y - KONG_H_PX;
+      let kph = 0;
+      const targetX = PLATFORMS[0].x + 10;
+      // First: walk right
+      const walkIv = setInterval(() => {
+        kx += 4;
+        kph = (kph + 1) % 2;
+        setKongIntroX(kx);
+        setKongIntroY(ky);
+        setKongIntroPhase(kph);
+        if (kx >= targetX) {
+          clearInterval(walkIv);
+          // Then: jump-climb up to top
+          const climbIv = setInterval(() => {
+            ky -= 6;
+            kph = (kph + 1) % 2;
+            setKongIntroY(ky);
+            setKongIntroPhase(kph);
+            if (ky <= KONG_Y) {
+              clearInterval(climbIv);
+              setKongIntroX(KONG_X);
+              setKongIntroY(KONG_Y);
+              setPrincessVisible(true);
+              setPhase('taunt');
+            }
+          }, 30);
+        }
+      }, 40);
+      return () => clearInterval(walkIv);
+    }
+
     if (phase === 'taunt') {
       setIntroText('HELP!');
-      // Kong beats chest
       let ph = 0;
       kongAnimRef.current = setInterval(() => {
         ph = (ph + 1) % 2;
         setKongIntroPhase(ph);
-      }, 250);
+      }, 200);
       const t = setTimeout(() => {
         clearInterval(kongAnimRef.current);
         setIntroText('');
         startGame();
-      }, 2000);
+      }, 2500);
       return () => { clearTimeout(t); clearInterval(kongAnimRef.current); };
     }
   }, [phase]);
@@ -267,8 +307,7 @@ export default function DonkeyKongScreen({ navigation, route }) {
       if (mario.y + MARIO_H <= mario.ladder.topY) {
         mario.y = mario.ladder.topY - MARIO_H;
         mario.ladder = null; mario.onGround = true; mario.state = 'idle';
-      }
-      if (mario.y + MARIO_H >= mario.ladder.bottomY + PLAT_H) {
+      } else if (mario.y + MARIO_H >= mario.ladder.bottomY + PLAT_H) {
         mario.ladder = null; mario.onGround = true; mario.state = 'idle';
       }
     } else {
@@ -481,21 +520,30 @@ export default function DonkeyKongScreen({ navigation, route }) {
   function renderLevel() {
     return <>
       {PLATFORMS.map(plat => (
-        <View key={plat.id} style={{
-          position: 'absolute', left: plat.x, top: plat.y,
-          width: plat.width, height: PLAT_H,
-          backgroundColor: GIRDER_COLOR,
-        }} />
-      ))}
-      {LADDERS.map(lad => (
-        <View key={lad.id} style={{ position: 'absolute', left: lad.x, top: lad.topY, width: LADDER_W, height: lad.bottomY - lad.topY }}>
-          {Array.from({ length: Math.floor((lad.bottomY - lad.topY) / 8) }).map((_, i) => (
-            <View key={i} style={{ position: 'absolute', top: i * 8 + 2, left: 1, right: 1, height: 3, backgroundColor: LADDER_COLOR }} />
-          ))}
-          <View style={{ position: 'absolute', top: 0, left: 1, width: 2, bottom: 0, backgroundColor: LADDER_COLOR }} />
-          <View style={{ position: 'absolute', top: 0, right: 1, width: 2, bottom: 0, backgroundColor: LADDER_COLOR }} />
+        <View key={plat.id} style={{ position: 'absolute', left: plat.x, top: plat.y, width: plat.width, height: PLAT_H }}>
+          {/* Top highlight */}
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, backgroundColor: GIRDER_TOP }} />
+          {/* Main body */}
+          <View style={{ position: 'absolute', top: 2, left: 0, right: 0, bottom: 2, backgroundColor: GIRDER_FRONT }} />
+          {/* Bottom shadow */}
+          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: GIRDER_SHADE }} />
         </View>
       ))}
+      {LADDERS.map(lad => {
+        const h = lad.bottomY - lad.topY;
+        const rungs = Math.floor(h / 9);
+        return (
+          <View key={lad.id} style={{ position: 'absolute', left: lad.x, top: lad.topY, width: LADDER_W, height: h }}>
+            {/* Rails */}
+            <View style={{ position: 'absolute', top: 0, left: 2, width: 2, bottom: 0, backgroundColor: LADDER_RAIL }} />
+            <View style={{ position: 'absolute', top: 0, right: 2, width: 2, bottom: 0, backgroundColor: LADDER_RAIL }} />
+            {/* Rungs */}
+            {Array.from({ length: rungs }).map((_, i) => (
+              <View key={i} style={{ position: 'absolute', top: i * 9 + 4, left: 2, right: 2, height: 2, backgroundColor: LADDER_RUNG }} />
+            ))}
+          </View>
+        );
+      })}
     </>;
   }
 
@@ -509,32 +557,51 @@ export default function DonkeyKongScreen({ navigation, route }) {
   }
 
   // Intro screens
-  if (phase === 'title' || phase === 'climb' || phase === 'taunt') {
+  if (phase === 'title' || phase === 'mariorun' || phase === 'climb' || phase === 'taunt') {
+    const introMarioSprite = marioIntroPhase === 0 ? MARIO_SPRITES.walkA : MARIO_SPRITES.walkB;
+    const introKongSprite  = KONG_SPRITES[kongIntroPhase === 0 ? 'idle' : 'throw'];
+    const marioFloorY = PLATFORMS[0].y - MARIO_H_PX;
     return (
       <SafeAreaView style={s.root}>
         <TouchableOpacity style={s.fullField} activeOpacity={1} onPress={() => { stopGame(); startGame(); }}>
           <View style={[s.field, { height: FIELD_H }]}>
             {renderLevel()}
-            {/* Kong intro position */}
-            <View style={{ position: 'absolute', left: KONG_X, top: kongIntroY }}>
-              <SpriteView pixels={KONG_SPRITES[kongIntroPhase === 0 ? 'idle' : 'throw']}
-                pixelSize={KONG_PX} width={KONG_W_PX} height={KONG_H_PX} />
-            </View>
+
+            {/* Mario intro – runs in from left */}
+            {(phase === 'mariorun' || phase === 'climb' || phase === 'taunt') && (
+              <View style={{ position: 'absolute', left: phase === 'mariorun' ? marioIntroX : MARIO_START_X + 20, top: marioFloorY }}>
+                <SpriteView pixels={introMarioSprite}
+                  pixelSize={MARIO_PX} width={MARIO_W_PX} height={MARIO_H_PX} />
+              </View>
+            )}
+
+            {/* Kong intro – walks in, then climbs */}
+            {(phase === 'climb' || phase === 'taunt') && (
+              <View style={{ position: 'absolute', left: kongIntroX, top: kongIntroY }}>
+                <SpriteView pixels={introKongSprite}
+                  pixelSize={KONG_PX} width={KONG_W_PX} height={KONG_H_PX} />
+              </View>
+            )}
+
+            {/* Princess appears after Kong reaches top */}
             {princessVisible && (
               <View style={{ position: 'absolute', left: PRINCESS_X, top: PRINCESS_Y }}>
                 <SpriteView pixels={PRINCESS_SPRITES.wave0}
                   pixelSize={PRINCESS_PX} width={PRINCESS_W_PX} height={PRINCESS_H_PX} />
               </View>
             )}
+
             {introText !== '' && (
-              <View style={[s.introTextBox, { top: KONG_Y - 30 }]}>
+              <View style={[s.introTextBox, { top: KONG_Y - 28, left: KONG_X + KONG_W_PX + 4 }]}>
                 <Text style={s.helpText}>{introText}</Text>
               </View>
             )}
+
             {phase === 'title' && (
               <View style={s.titleOverlay}>
                 <Text style={s.titleText}>DONKEY KONG</Text>
-                <Text style={s.subText}>Tippen zum Überspringen</Text>
+                <Text style={s.subText}>── HOW HIGH CAN YOU GET? ──</Text>
+                <Text style={[s.subText, { marginTop: 20 }]}>Tippen zum Überspringen</Text>
               </View>
             )}
           </View>
@@ -660,7 +727,7 @@ const s = StyleSheet.create({
   titleOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', gap: 12 },
   titleText: { color: '#ffaa00', fontFamily: 'monospace', fontSize: 28, fontWeight: 'bold', letterSpacing: 4 },
   subText: { color: '#888', fontFamily: 'monospace', fontSize: 12 },
-  introTextBox: { position: 'absolute', left: KONG_X + KONG_W_PX },
+  introTextBox: { position: 'absolute' },
   helpText: { color: '#ff88aa', fontFamily: 'monospace', fontSize: 14, fontWeight: 'bold' },
 
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)', alignItems: 'center', justifyContent: 'center', gap: 14 },

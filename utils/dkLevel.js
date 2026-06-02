@@ -6,28 +6,28 @@ export const FIELD_H   = Math.round(SCREEN_H * 0.60);
 export const PLAT_H    = 8;
 export const LADDER_W  = 14;
 
-export const MARIO_PX  = 3;
-export const MARIO_COLS = 6;
-export const MARIO_ROWS = 8;
-export const MARIO_W   = MARIO_COLS * MARIO_PX;   // 18
-export const MARIO_H   = MARIO_ROWS * MARIO_PX;   // 24
+export const MARIO_PX  = 2;
+export const MARIO_COLS = 12;
+export const MARIO_ROWS = 16;
+export const MARIO_W   = MARIO_COLS * MARIO_PX;   // 24
+export const MARIO_H   = MARIO_ROWS * MARIO_PX;   // 32
 
 export const KONG_PX   = 3;
-export const KONG_COLS = 12;
-export const KONG_ROWS = 12;
-export const KONG_W    = KONG_COLS * KONG_PX;     // 36
-export const KONG_H    = KONG_ROWS * KONG_PX;     // 36
+export const KONG_COLS = 16;
+export const KONG_ROWS = 16;
+export const KONG_W    = KONG_COLS * KONG_PX;     // 48
+export const KONG_H    = KONG_ROWS * KONG_PX;     // 48
 
-export const PRINCESS_PX   = 3;
-export const PRINCESS_COLS = 5;
-export const PRINCESS_ROWS = 9;
-export const PRINCESS_W    = PRINCESS_COLS * PRINCESS_PX;  // 15
-export const PRINCESS_H    = PRINCESS_ROWS * PRINCESS_PX;  // 27
+export const PRINCESS_PX   = 2;
+export const PRINCESS_COLS = 8;
+export const PRINCESS_ROWS = 14;
+export const PRINCESS_W    = PRINCESS_COLS * PRINCESS_PX;  // 16
+export const PRINCESS_H    = PRINCESS_ROWS * PRINCESS_PX;  // 28
 
-export const BARREL_PX   = 4;
-export const BARREL_COLS = 4;
-export const BARREL_ROWS = 4;
-export const BARREL_SIZE = BARREL_COLS * BARREL_PX;        // 16
+export const BARREL_PX   = 3;
+export const BARREL_COLS = 8;
+export const BARREL_ROWS = 6;
+export const BARREL_SIZE = BARREL_COLS * BARREL_PX;        // 24
 
 export const GRAVITY         = 0.55;
 export const JUMP_VY         = -9.5;
