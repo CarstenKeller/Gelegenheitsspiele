@@ -46,7 +46,7 @@ export default function HomeScreen({ navigation }) {
   return (
     <SafeAreaView style={s.root}>
       <ScrollView contentContainerStyle={s.scroll}>
-        <Text style={s.title}>GELEGENHEITSSPIELE</Text>
+        <Text style={s.title}>ARCADE GAMES</Text>
 
         {/* Spielkacheln */}
         <View style={s.section}>
