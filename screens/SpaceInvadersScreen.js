@@ -206,15 +206,15 @@ export default function SpaceInvadersScreen({ navigation, route }) {
     if (gs.invaderDirX === -1 && leftmost - gs.invaderSpeed < 0) hitWall = true;
 
     if (hitWall) {
-      gs.invaders = gs.invaders.map(i => ({ ...i, y: i.y + INVADER_H / 2 }));
+      gs.invaders = gs.invaders.map(i => ({ ...i, y: i.y + 8 }));
       gs.invaderDirX *= -1;
     } else {
       gs.invaders = gs.invaders.map(i => ({ ...i, x: i.x + gs.invaderSpeed * gs.invaderDirX }));
     }
 
-    // Check invader reached lower half
-    const lowestY = Math.max(...alive.map(i => i.y));
-    if (lowestY > FIELD_H / 2) {
+    // Check invader reached player level → Game Over
+    const lowestYAfterMove = Math.max(...gs.invaders.filter(i => i.alive).map(i => i.y + INVADER_H));
+    if (lowestYAfterMove >= gs.playerY) {
       endGame();
       return;
     }
