@@ -143,7 +143,7 @@ D-Pad verhält sich kontextsensitiv:
 - [~] **Schritt 7:** `screens/DonkeyKongScreen.js` – Spielschleife, Physik, Kollisionen
 - [~] **Schritt 8:** `screens/DonkeyKongScreen.js` – Barrel-Logik, Score, Leben, Game Over
 - [x] **Schritt 9:** `utils/storage.js` + `screens/HomeScreen.js` + `App.js` – Integration
-- [~] **Schritt 10:** Commit & Push
+- [x] **Schritt 10:** Commit & Push
 
 ---
 
