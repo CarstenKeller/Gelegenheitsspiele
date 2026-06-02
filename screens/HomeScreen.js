@@ -18,6 +18,7 @@ export default function HomeScreen({ navigation }) {
   const [playerName, setPlayerName] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [difficulty, setDifficulty] = useState('normal');
+  const [handedness, setHandedness] = useState('right');
   const [highscore, setHighscore] = useState({ score: 0, name: '' });
 
   useFocusEffect(
@@ -27,16 +28,18 @@ export default function HomeScreen({ navigation }) {
         setPlayerName(settings.playerName);
         setSoundEnabled(settings.soundEnabled);
         setDifficulty(settings.difficulty);
+        setHandedness(settings.handedness ?? 'right');
         setHighscore(hs);
       })();
     }, [])
   );
 
   const handleSetting = async (key, value) => {
-    const next = { playerName, soundEnabled, difficulty, [key]: value };
+    const next = { playerName, soundEnabled, difficulty, handedness, [key]: value };
     if (key === 'playerName') setPlayerName(value);
     if (key === 'soundEnabled') setSoundEnabled(value);
     if (key === 'difficulty') setDifficulty(value);
+    if (key === 'handedness') setHandedness(value);
     await saveSettings(next);
   };
 
@@ -52,7 +55,7 @@ export default function HomeScreen({ navigation }) {
               <TouchableOpacity
                 key={game.id}
                 style={s.gameTile}
-                onPress={() => navigation.navigate(game.screen, { difficulty, soundEnabled, playerName })}
+                onPress={() => navigation.navigate(game.screen, { difficulty, soundEnabled, playerName, handedness })}
               >
                 <Text style={s.gameTileTitle}>{game.title}</Text>
                 {highscore.score > 0 && (
@@ -114,6 +117,21 @@ export default function HomeScreen({ navigation }) {
               >
                 <Text style={[s.diffBtnText, difficulty === d && s.diffBtnTextActive]}>
                   {d.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={[s.label, { marginTop: 16 }]}>Controller</Text>
+          <View style={s.diffRow}>
+            {['right', 'left'].map((h) => (
+              <TouchableOpacity
+                key={h}
+                style={[s.diffBtn, { flex: 1 }, handedness === h && s.diffBtnActive]}
+                onPress={() => handleSetting('handedness', h)}
+              >
+                <Text style={[s.diffBtnText, handedness === h && s.diffBtnTextActive]}>
+                  {h === 'right' ? '◀▶  FIRE' : 'FIRE  ◀▶'}
                 </Text>
               </TouchableOpacity>
             ))}

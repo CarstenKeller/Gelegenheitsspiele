@@ -106,15 +106,15 @@ Space Invaders soll optisch, akustisch und im Spielgefühl dem Atari-Original so
 
 ## Implementierungsschritte
 
-- [ ] **Schritt 1:** `utils/sounds.js` – Marschrhythmus-Engine + alle Sounds als Base64-WAV inline
-- [ ] **Schritt 2:** `components/Invader.js` – 3 Typen, 2 Animationsphasen, korrekte Punktewerte
-- [ ] **Schritt 3:** `components/PlayerShip.js` – Kanonenform als View-Komposition
-- [ ] **Schritt 4:** `components/Bunker.js` – 6×4 Block-Grid, Einzelblock-Zerstörung
-- [ ] **Schritt 5:** `components/Ufo.js` – UFO-Bewegung + zufällige Punktewerte
-- [ ] **Schritt 6:** `screens/SpaceInvadersScreen.js` – Neue Grafik einbauen, Bunker-Kollision, UFO-Logik, Original-Bewegungslogik, HUD-Überarbeitung
-- [ ] **Schritt 7:** `components/GameController.js` – Händigkeit-Layout
-- [ ] **Schritt 8:** `screens/HomeScreen.js` + `utils/storage.js` – Händigkeit-Setting
-- [ ] **Schritt 9:** Commit & Push
+- [x] **Schritt 1:** `utils/sounds.js` – Marschrhythmus-Engine + alle Sounds als Base64-WAV inline
+- [x] **Schritt 2:** `components/Invader.js` – 3 Typen, 2 Animationsphasen, korrekte Punktewerte
+- [x] **Schritt 3:** `components/PlayerShip.js` – Kanonenform als View-Komposition
+- [x] **Schritt 4:** `components/Bunker.js` – 6×4 Block-Grid, Einzelblock-Zerstörung
+- [x] **Schritt 5:** `components/Ufo.js` – UFO-Bewegung + zufällige Punktewerte
+- [x] **Schritt 6:** `screens/SpaceInvadersScreen.js` – Neue Grafik einbauen, Bunker-Kollision, UFO-Logik, Original-Bewegungslogik, HUD-Überarbeitung
+- [x] **Schritt 7:** `components/GameController.js` – Händigkeit-Layout
+- [x] **Schritt 8:** `screens/HomeScreen.js` + `utils/storage.js` – Händigkeit-Setting
+- [~] **Schritt 9:** Commit & Push
 
 ---
 

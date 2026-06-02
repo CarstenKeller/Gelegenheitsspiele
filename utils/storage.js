@@ -5,6 +5,7 @@ const KEYS = {
   PLAYER_NAME: 'player_name',
   SOUND_ENABLED: 'sound_enabled',
   DIFFICULTY: 'difficulty',
+  HANDEDNESS: 'handedness',
 };
 
 export async function getHighscore() {
@@ -17,22 +18,25 @@ export async function saveHighscore(score, name) {
 }
 
 export async function getSettings() {
-  const [name, sound, difficulty] = await Promise.all([
+  const [name, sound, difficulty, handedness] = await Promise.all([
     AsyncStorage.getItem(KEYS.PLAYER_NAME),
     AsyncStorage.getItem(KEYS.SOUND_ENABLED),
     AsyncStorage.getItem(KEYS.DIFFICULTY),
+    AsyncStorage.getItem(KEYS.HANDEDNESS),
   ]);
   return {
     playerName: name ?? '',
     soundEnabled: sound !== null ? JSON.parse(sound) : true,
     difficulty: difficulty ?? 'normal',
+    handedness: handedness ?? 'right',
   };
 }
 
-export async function saveSettings({ playerName, soundEnabled, difficulty }) {
+export async function saveSettings({ playerName, soundEnabled, difficulty, handedness }) {
   await Promise.all([
     AsyncStorage.setItem(KEYS.PLAYER_NAME, playerName),
     AsyncStorage.setItem(KEYS.SOUND_ENABLED, JSON.stringify(soundEnabled)),
     AsyncStorage.setItem(KEYS.DIFFICULTY, difficulty),
+    AsyncStorage.setItem(KEYS.HANDEDNESS, handedness),
   ]);
 }

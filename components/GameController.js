@@ -1,43 +1,49 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 
-export default function GameController({ controlsRef }) {
+function Btn({ label, onPressIn, onPressOut, style }) {
+  return (
+    <Pressable
+      style={({ pressed }) => [s.btn, style, pressed && s.btnPressed]}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+    >
+      <Text style={s.btnText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+export default function GameController({ controlsRef, handedness = 'right' }) {
+  const dpad = (
+    <View style={s.dpad}>
+      <Btn label="◀" onPressIn={() => { controlsRef.current.left = true; }} onPressOut={() => { controlsRef.current.left = false; }} />
+      <Btn label="▶" onPressIn={() => { controlsRef.current.right = true; }} onPressOut={() => { controlsRef.current.right = false; }} />
+    </View>
+  );
+
+  const fire = (
+    <Btn
+      label="FIRE"
+      style={s.fireBtn}
+      onPressIn={() => { controlsRef.current.fire = true; }}
+      onPressOut={() => { controlsRef.current.fire = false; }}
+    />
+  );
+
   return (
     <View style={s.container}>
-      <View style={s.left}>
-        <Pressable
-          style={({ pressed }) => [s.btn, pressed && s.btnPressed]}
-          onPressIn={() => { controlsRef.current.left = true; }}
-          onPressOut={() => { controlsRef.current.left = false; }}
-        >
-          <Text style={s.btnText}>◀</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [s.btn, pressed && s.btnPressed]}
-          onPressIn={() => { controlsRef.current.right = true; }}
-          onPressOut={() => { controlsRef.current.right = false; }}
-        >
-          <Text style={s.btnText}>▶</Text>
-        </Pressable>
-      </View>
-      <View style={s.right}>
-        <Pressable
-          style={({ pressed }) => [s.btn, s.fireBtn, pressed && s.btnPressed]}
-          onPressIn={() => { controlsRef.current.fire = true; }}
-          onPressOut={() => { controlsRef.current.fire = false; }}
-        >
-          <Text style={s.btnText}>FIRE</Text>
-        </Pressable>
-      </View>
+      {handedness === 'left' ? fire : dpad}
+      <View style={s.spacer} />
+      {handedness === 'left' ? dpad : fire}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#050505' },
-  left: { flexDirection: 'row', gap: 16 },
-  right: {},
-  btn: { width: 70, height: 70, borderWidth: 2, borderColor: '#0f0', borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0a1a0a' },
-  fireBtn: { borderColor: '#f00', backgroundColor: '#1a0a0a', width: 80, height: 80 },
+  container: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#050505', borderTopWidth: 1, borderColor: '#0a2a0a' },
+  spacer: { flex: 1 },
+  dpad: { flexDirection: 'row', gap: 12 },
+  btn: { width: 68, height: 68, borderWidth: 2, borderColor: '#0f0', borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0a1a0a' },
+  fireBtn: { width: 80, height: 80, borderColor: '#ff3333', backgroundColor: '#1a0505' },
   btnPressed: { backgroundColor: '#1a3a1a' },
   btnText: { color: '#0f0', fontFamily: 'monospace', fontSize: 22, fontWeight: 'bold' },
 });
