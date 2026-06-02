@@ -8,13 +8,13 @@ const KEYS = {
   HANDEDNESS: 'handedness',
 };
 
-export async function getHighscore() {
-  const val = await AsyncStorage.getItem(KEYS.HIGHSCORE);
+export async function getHighscore(gameKey = 'spaceinvaders') {
+  const val = await AsyncStorage.getItem(`highscore_${gameKey}`);
   return val ? JSON.parse(val) : { score: 0, name: '' };
 }
 
-export async function saveHighscore(score, name) {
-  await AsyncStorage.setItem(KEYS.HIGHSCORE, JSON.stringify({ score, name }));
+export async function saveHighscore(score, name, gameKey = 'spaceinvaders') {
+  await AsyncStorage.setItem(`highscore_${gameKey}`, JSON.stringify({ score, name }));
 }
 
 export async function getSettings() {

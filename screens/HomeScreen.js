@@ -10,6 +10,7 @@ const DIFFICULTIES = ['easy', 'normal', 'hard'];
 
 const GAMES = [
   { id: 'spaceinvaders', title: 'Space Invaders', screen: 'SpaceInvaders', available: true },
+  { id: 'donkeykong', title: 'Donkey Kong', screen: 'DonkeyKong', available: true },
   { id: 'breakout', title: 'Breakout', available: false },
   { id: 'snake', title: 'Snake', available: false },
 ];
@@ -19,17 +20,21 @@ export default function HomeScreen({ navigation }) {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [difficulty, setDifficulty] = useState('normal');
   const [handedness, setHandedness] = useState('right');
-  const [highscore, setHighscore] = useState({ score: 0, name: '' });
+  const [highscores, setHighscores] = useState({});
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [settings, hs] = await Promise.all([getSettings(), getHighscore()]);
+        const [settings, hsSI, hsDK] = await Promise.all([
+          getSettings(),
+          getHighscore('spaceinvaders'),
+          getHighscore('donkeykong'),
+        ]);
         setPlayerName(settings.playerName);
         setSoundEnabled(settings.soundEnabled);
         setDifficulty(settings.difficulty);
         setHandedness(settings.handedness ?? 'right');
-        setHighscore(hs);
+        setHighscores({ spaceinvaders: hsSI, donkeykong: hsDK });
       })();
     }, [])
   );
@@ -58,8 +63,8 @@ export default function HomeScreen({ navigation }) {
                 onPress={() => navigation.navigate(game.screen, { difficulty, soundEnabled, playerName, handedness })}
               >
                 <Text style={s.gameTileTitle}>{game.title}</Text>
-                {highscore.score > 0 && (
-                  <Text style={s.gameTileScore}>Best: {highscore.score}</Text>
+                {highscores[game.id]?.score > 0 && (
+                  <Text style={s.gameTileScore}>Best: {highscores[game.id].score}</Text>
                 )}
               </TouchableOpacity>
             ) : (
@@ -68,18 +73,6 @@ export default function HomeScreen({ navigation }) {
                 <Text style={s.comingSoon}>Bald verfügbar</Text>
               </View>
             )
-          )}
-        </View>
-
-        {/* Highscore */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>HIGHSCORE</Text>
-          {highscore.score > 0 ? (
-            <Text style={s.highscoreText}>
-              {highscore.name || 'Unbekannt'} – {highscore.score} Punkte
-            </Text>
-          ) : (
-            <Text style={s.highscoreText}>Noch kein Highscore</Text>
           )}
         </View>
 
@@ -156,8 +149,6 @@ const s = StyleSheet.create({
   gameTileTitleDisabled: { color: '#444' },
   gameTileScore: { color: '#0a0', fontFamily: 'monospace', fontSize: 12, marginTop: 4 },
   comingSoon: { color: '#444', fontFamily: 'monospace', fontSize: 12, marginTop: 4 },
-
-  highscoreText: { color: '#fff', fontFamily: 'monospace', fontSize: 15 },
 
   label: { color: '#aaa', fontFamily: 'monospace', fontSize: 13, marginBottom: 6 },
   input: { backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#333', borderRadius: 4, color: '#fff', fontFamily: 'monospace', fontSize: 15, padding: 10, marginBottom: 16 },

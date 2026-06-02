@@ -134,16 +134,16 @@ D-Pad verhält sich kontextsensitiv:
 
 ## Implementierungsschritte
 
-- [ ] **Schritt 1:** `utils/dkLevel.js` – Plattform- und Leiter-Koordinaten als Daten
-- [ ] **Schritt 2:** `utils/dkSounds.js` – Sounds (Sprung, Barrel, Tod, Sieg, Intro-Jingle)
-- [ ] **Schritt 3:** `components/DKMario.js` – Pixel-Art alle Zustände
-- [ ] **Schritt 4:** `components/DKKong.js` + `DKPrincess.js` + `DKBarrel.js`
-- [ ] **Schritt 5:** `components/DKController.js` – 4-Richtungs-D-Pad + JUMP
-- [ ] **Schritt 6:** `screens/DonkeyKongScreen.js` – Introszene (State Machine)
-- [ ] **Schritt 7:** `screens/DonkeyKongScreen.js` – Spielschleife, Physik, Kollisionen
-- [ ] **Schritt 8:** `screens/DonkeyKongScreen.js` – Barrel-Logik, Score, Leben, Game Over
-- [ ] **Schritt 9:** `utils/storage.js` + `screens/HomeScreen.js` + `App.js` – Integration
-- [ ] **Schritt 10:** Commit & Push
+- [~] **Schritt 1:** `utils/dkLevel.js` – Plattform- und Leiter-Koordinaten als Daten
+- [~] **Schritt 2:** `utils/dkSounds.js` – Sounds (Sprung, Barrel, Tod, Sieg, Intro-Jingle)
+- [~] **Schritt 3:** `components/DKMario.js` – Pixel-Art alle Zustände
+- [~] **Schritt 4:** `components/DKKong.js` + `DKPrincess.js` + `DKBarrel.js`
+- [~] **Schritt 5:** `components/DKController.js` – 4-Richtungs-D-Pad + JUMP
+- [~] **Schritt 6:** `screens/DonkeyKongScreen.js` – Introszene (State Machine)
+- [~] **Schritt 7:** `screens/DonkeyKongScreen.js` – Spielschleife, Physik, Kollisionen
+- [~] **Schritt 8:** `screens/DonkeyKongScreen.js` – Barrel-Logik, Score, Leben, Game Over
+- [x] **Schritt 9:** `utils/storage.js` + `screens/HomeScreen.js` + `App.js` – Integration
+- [~] **Schritt 10:** Commit & Push
 
 ---
 
