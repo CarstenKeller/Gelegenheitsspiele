@@ -114,7 +114,7 @@ Space Invaders soll optisch, akustisch und im Spielgefühl dem Atari-Original so
 - [x] **Schritt 6:** `screens/SpaceInvadersScreen.js` – Neue Grafik einbauen, Bunker-Kollision, UFO-Logik, Original-Bewegungslogik, HUD-Überarbeitung
 - [x] **Schritt 7:** `components/GameController.js` – Händigkeit-Layout
 - [x] **Schritt 8:** `screens/HomeScreen.js` + `utils/storage.js` – Händigkeit-Setting
-- [~] **Schritt 9:** Commit & Push
+- [x] **Schritt 9:** Commit & Push
 
 ---
 
