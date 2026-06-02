@@ -24,9 +24,9 @@ import { getHighscore, saveHighscore } from '../utils/storage';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const ANIM_INTERVAL = 180; // ms between walk animation frames
-const GIRDER_TOP    = '#ff7722'; // bright orange top face
-const GIRDER_FRONT  = '#cc4400'; // darker front face
-const GIRDER_SHADE  = '#882200'; // shadow
+const GIRDER_TOP    = '#ff7722';
+const GIRDER_FRONT  = '#cc4400';
+const GIRDER_SHADE  = '#882200';
 const LADDER_RAIL   = '#ddbb00';
 const LADDER_RUNG   = '#ffee44';
 const PLATFORM_COUNT = PLATFORMS.length;
@@ -441,25 +441,28 @@ export default function DonkeyKongScreen({ navigation, route }) {
         }
       }
     } else {
-      // In air
+      // In air – apply both gravity and horizontal momentum
       b.vy = Math.min(b.vy + GRAVITY, MAX_FALL);
       b.y += b.vy;
+      b.x += b.vx;
 
+      let landed = false;
       for (const plat of PLATFORMS) {
         if (b.x + BARREL_SIZE > plat.x && b.x < plat.x + plat.width) {
           const prev = b.y + BARREL_SIZE - b.vy;
-          if (prev <= plat.y + 1 && b.y + BARREL_SIZE >= plat.y) {
+          if (b.vy >= 0 && prev <= plat.y + 2 && b.y + BARREL_SIZE >= plat.y) {
             b.y = plat.y - BARREL_SIZE;
             b.vy = 0;
             b.onGround = true;
             b.platId = plat.id;
             b.vx = barrelSpeed(round) * plat.rollDir;
+            landed = true;
             break;
           }
         }
       }
 
-      if (b.y > FIELD_H + 40) b.remove = true;
+      if (!landed && b.y > FIELD_H + 40) b.remove = true;
     }
   }
 
@@ -519,25 +522,30 @@ export default function DonkeyKongScreen({ navigation, route }) {
 
   function renderLevel() {
     return <>
-      {PLATFORMS.map(plat => (
-        <View key={plat.id} style={{ position: 'absolute', left: plat.x, top: plat.y, width: plat.width, height: PLAT_H }}>
-          {/* Top highlight */}
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, backgroundColor: GIRDER_TOP }} />
-          {/* Main body */}
-          <View style={{ position: 'absolute', top: 2, left: 0, right: 0, bottom: 2, backgroundColor: GIRDER_FRONT }} />
-          {/* Bottom shadow */}
-          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: GIRDER_SHADE }} />
-        </View>
-      ))}
+      {PLATFORMS.map(plat => {
+        const deg = plat.tiltDeg || 0;
+        // Adjust top so visual slope center aligns with physics y
+        const tiltOffset = Math.abs(deg) > 0 ? Math.round(plat.width * Math.sin(Math.abs(deg) * Math.PI / 180) / 2) : 0;
+        const adjustedTop = deg > 0 ? plat.y - tiltOffset : deg < 0 ? plat.y + tiltOffset : plat.y;
+        return (
+          <View key={plat.id} style={{
+            position: 'absolute', left: plat.x, top: adjustedTop,
+            width: plat.width, height: PLAT_H + 4,
+            transform: deg !== 0 ? [{ rotate: `${deg}deg` }] : undefined,
+          }}>
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, backgroundColor: GIRDER_TOP }} />
+            <View style={{ position: 'absolute', top: 2, left: 0, right: 0, bottom: 2, backgroundColor: GIRDER_FRONT }} />
+            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: GIRDER_SHADE }} />
+          </View>
+        );
+      })}
       {LADDERS.map(lad => {
         const h = lad.bottomY - lad.topY;
         const rungs = Math.floor(h / 9);
         return (
           <View key={lad.id} style={{ position: 'absolute', left: lad.x, top: lad.topY, width: LADDER_W, height: h }}>
-            {/* Rails */}
             <View style={{ position: 'absolute', top: 0, left: 2, width: 2, bottom: 0, backgroundColor: LADDER_RAIL }} />
             <View style={{ position: 'absolute', top: 0, right: 2, width: 2, bottom: 0, backgroundColor: LADDER_RAIL }} />
-            {/* Rungs */}
             {Array.from({ length: rungs }).map((_, i) => (
               <View key={i} style={{ position: 'absolute', top: i * 9 + 4, left: 2, right: 2, height: 2, backgroundColor: LADDER_RUNG }} />
             ))}
