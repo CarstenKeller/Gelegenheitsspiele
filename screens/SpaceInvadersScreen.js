@@ -28,9 +28,9 @@ const UFO_SPEED = 2;
 const MARCH_NOTES = ['march0', 'march1', 'march2', 'march3'];
 
 const DIFFICULTY_PARAMS = {
-  easy:   { playerSpeed: 5, invaderBaseInterval: 900, invaderShootInterval: 2400 },
-  normal: { playerSpeed: 6, invaderBaseInterval: 600, invaderShootInterval: 1600 },
-  hard:   { playerSpeed: 7, invaderBaseInterval: 350, invaderShootInterval: 900 },
+  easy:   { playerSpeed: 2, invaderBaseInterval: 900, invaderShootInterval: 2400 },
+  normal: { playerSpeed: 3, invaderBaseInterval: 600, invaderShootInterval: 1600 },
+  hard:   { playerSpeed: 4, invaderBaseInterval: 350, invaderShootInterval: 900 },
 };
 
 function rowToType(row) {
@@ -499,18 +499,18 @@ export default function SpaceInvadersScreen({ navigation, route }) {
         )}
       </View>
 
-      {/* Controller with pause & menu buttons */}
-      <View style={s.controllerRow}>
-        <View style={s.sideButtons}>
-          <TouchableOpacity style={s.sideBtn} onPress={togglePause}>
-            <Text style={s.sideBtnText}>{gamePhase === 'paused' ? '▶' : '⏸'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[s.sideBtn, s.exitBtn]} onPress={confirmQuit}>
-            <Text style={[s.sideBtnText, { color: '#888' }]}>✕</Text>
-          </TouchableOpacity>
-        </View>
-        <GameController controlsRef={controlsRef} handedness={handedness} />
+      {/* Action bar: pause + quit */}
+      <View style={s.actionBar}>
+        <TouchableOpacity style={s.actionBtn} onPress={togglePause}>
+          <Text style={s.actionBtnText}>{gamePhase === 'paused' ? '▶ WEITER' : '⏸ PAUSE'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[s.actionBtn, s.quitBtn]} onPress={confirmQuit}>
+          <Text style={[s.actionBtnText, { color: '#666' }]}>✕ MENÜ</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Controller — full width */}
+      <GameController controlsRef={controlsRef} handedness={handedness} />
     </SafeAreaView>
   );
 }
@@ -540,9 +540,8 @@ const s = StyleSheet.create({
   menuBtn: { borderColor: '#444' },
   overlayBtnText: { color: '#0f0', fontFamily: 'monospace', fontSize: 18, fontWeight: 'bold' },
 
-  controllerRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#050505', borderTopWidth: 1, borderColor: '#0a2a0a' },
-  sideButtons: { flexDirection: 'column', gap: 6, paddingLeft: 8, paddingVertical: 8 },
-  sideBtn: { width: 36, height: 36, borderWidth: 1, borderColor: '#333', borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  exitBtn: { borderColor: '#2a2a2a' },
-  sideBtnText: { color: '#0f0', fontFamily: 'monospace', fontSize: 16 },
+  actionBar: { flexDirection: 'row', justifyContent: 'center', gap: 24, paddingVertical: 6, backgroundColor: '#050505', borderTopWidth: 1, borderColor: '#0a2a0a' },
+  actionBtn: { paddingHorizontal: 16, paddingVertical: 4, borderWidth: 1, borderColor: '#1a3a1a', borderRadius: 4 },
+  quitBtn: { borderColor: '#2a2a2a' },
+  actionBtnText: { color: '#0f0', fontFamily: 'monospace', fontSize: 12 },
 });

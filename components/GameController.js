@@ -39,7 +39,7 @@ export default function GameController({ controlsRef, handedness = 'right' }) {
 }
 
 const s = StyleSheet.create({
-  container: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#050505', borderTopWidth: 1, borderColor: '#0a2a0a' },
+  container: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#050505' },
   spacer: { flex: 1 },
   dpad: { flexDirection: 'row', gap: 12 },
   btn: { width: 68, height: 68, borderWidth: 2, borderColor: '#0f0', borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0a1a0a' },
