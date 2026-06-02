@@ -1,12 +1,12 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import GameController from '../components/GameController';
 import Invader, { INVADER_W, INVADER_H, INVADER_POINTS } from '../components/Invader';
 import PlayerShip, { PLAYER_W, PLAYER_H } from '../components/PlayerShip';
-import Bunker, { BUNKER_W, BUNKER_H, buildBunker } from '../components/Bunker';
+import Bunker, { BUNKER_W, BUNKER_H, BLOCK, buildBunker, hitBunker } from '../components/Bunker';
 import Ufo, { UFO_W, UFO_H, UFO_POINTS } from '../components/Ufo';
 import { getHighscore, saveHighscore } from '../utils/storage';
-import { preloadSounds, playSound, unloadSounds, startMarch, stopMarch, updateMarch } from '../utils/sounds';
+import { preloadSounds, playSound, unloadSounds } from '../utils/sounds';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const FIELD_H = Math.round(SCREEN_H * 0.60);
@@ -21,9 +21,11 @@ const V_GAP = 14;
 const INVADER_TOP = 36;
 
 const BUNKER_COUNT = 4;
-const BUNKER_Y = FIELD_H - PLAYER_H - BUNKER_H - 24;
-const UFO_Y = 14;
+const BUNKER_Y = FIELD_H - PLAYER_H - BUNKER_H - 28;
+const UFO_Y = 10;
 const UFO_SPEED = 2;
+
+const MARCH_NOTES = ['march0', 'march1', 'march2', 'march3'];
 
 const DIFFICULTY_PARAMS = {
   easy:   { playerSpeed: 5, invaderBaseInterval: 900, invaderShootInterval: 2400 },
@@ -31,7 +33,6 @@ const DIFFICULTY_PARAMS = {
   hard:   { playerSpeed: 7, invaderBaseInterval: 350, invaderShootInterval: 900 },
 };
 
-// Score row type: row 0 (top) = type 2, rows 1-2 = type 1, row 3+ = type 0 (but we have 3 rows)
 function rowToType(row) {
   if (row === 0) return 2;
   if (row === 1) return 1;
@@ -56,17 +57,13 @@ function buildInvaders() {
 }
 
 function buildBunkers() {
-  const bunkers = [];
   const spacing = Math.floor(SCREEN_W / (BUNKER_COUNT + 1));
-  for (let i = 0; i < BUNKER_COUNT; i++) {
-    bunkers.push({
-      id: i,
-      x: spacing * (i + 1) - BUNKER_W / 2,
-      y: BUNKER_Y,
-      blocks: buildBunker(),
-    });
-  }
-  return bunkers;
+  return Array.from({ length: BUNKER_COUNT }, (_, i) => ({
+    id: i,
+    x: spacing * (i + 1) - BUNKER_W / 2,
+    y: BUNKER_Y,
+    blocks: buildBunker(),
+  }));
 }
 
 function overlap(ax, ay, aw, ah, bx, by, bw, bh) {
@@ -83,22 +80,22 @@ export default function SpaceInvadersScreen({ navigation, route }) {
   const invaderShootRef = useRef(null);
   const invaderMoveRef = useRef(null);
   const ufoTimerRef = useRef(null);
-  const marchIntervalRef = useRef(null);
+  const marchStepRef = useRef(0);
+  const soundsReady = useRef(false);
 
   const [renderTick, setRenderTick] = useState(0);
-  const [gamePhase, setGamePhase] = useState('playing');
+  const [gamePhase, setGamePhase] = useState('loading');
   const [isNewHighscore, setIsNewHighscore] = useState(false);
   const [hiScore, setHiScore] = useState(0);
 
   const initState = useCallback((round = 1, score = 0, lives = 3) => {
-    const invaders = buildInvaders();
     gs.current = {
       playerX: SCREEN_W / 2 - PLAYER_W / 2,
       playerY: FIELD_H - PLAYER_H - 6,
       lives,
       score,
       round,
-      invaders,
+      invaders: buildInvaders(),
       invaderDirX: 1,
       invaderPhase: 0,
       playerBullet: null,
@@ -111,15 +108,33 @@ export default function SpaceInvadersScreen({ navigation, route }) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       const hs = await getHighscore();
-      setHiScore(hs.score);
+      if (!cancelled) setHiScore(hs.score);
+
+      initState(1);
+
+      if (soundEnabled) {
+        try { await preloadSounds(); } catch (_) {}
+      }
+      soundsReady.current = true;
+
+      if (!cancelled) {
+        setGamePhase('playing');
+        startAll();
+      }
     })();
-    initState(1);
-    if (soundEnabled) preloadSounds();
-    startAll();
-    return () => stopAll();
+    return () => {
+      cancelled = true;
+      stopAll();
+      if (soundEnabled) unloadSounds();
+    };
   }, []);
+
+  function play(name) {
+    if (soundEnabled && soundsReady.current) playSound(name);
+  }
 
   function startAll() {
     startPlayerLoop();
@@ -129,12 +144,10 @@ export default function SpaceInvadersScreen({ navigation, route }) {
   }
 
   function stopAll() {
-    stopMarch();
-    if (loopRef.current) clearInterval(loopRef.current);
-    if (invaderShootRef.current) clearInterval(invaderShootRef.current);
-    if (invaderMoveRef.current) clearInterval(invaderMoveRef.current);
-    if (ufoTimerRef.current) clearTimeout(ufoTimerRef.current);
-    if (soundEnabled) unloadSounds();
+    if (loopRef.current) { clearInterval(loopRef.current); loopRef.current = null; }
+    if (invaderShootRef.current) { clearInterval(invaderShootRef.current); invaderShootRef.current = null; }
+    if (invaderMoveRef.current) { clearInterval(invaderMoveRef.current); invaderMoveRef.current = null; }
+    if (ufoTimerRef.current) { clearTimeout(ufoTimerRef.current); ufoTimerRef.current = null; }
   }
 
   function startPlayerLoop() {
@@ -142,28 +155,14 @@ export default function SpaceInvadersScreen({ navigation, route }) {
     loopRef.current = setInterval(playerTick, 16);
   }
 
-  function startInvaderMove() {
-    if (invaderMoveRef.current) clearInterval(invaderMoveRef.current);
-    const state = gs.current;
-    const alive = state ? state.invaders.filter(i => i.alive).length : COLS * ROWS;
-    const interval = Math.max(80, params.invaderBaseInterval - (COLS * ROWS - alive) * 15);
-    invaderMoveRef.current = setInterval(invaderMoveTick, interval);
-
-    if (soundEnabled) {
-      const marchMs = updateMarch(alive, soundEnabled);
-      startMarch(marchMs, soundEnabled);
-    }
+  function getInvaderInterval() {
+    const alive = gs.current ? gs.current.invaders.filter(i => i.alive).length : COLS * ROWS;
+    return Math.max(80, params.invaderBaseInterval - (COLS * ROWS - alive) * 14);
   }
 
-  function restartInvaderMove() {
+  function startInvaderMove() {
     if (invaderMoveRef.current) clearInterval(invaderMoveRef.current);
-    const alive = gs.current ? gs.current.invaders.filter(i => i.alive).length : 1;
-    const interval = Math.max(80, params.invaderBaseInterval - (COLS * ROWS - alive) * 15);
-    invaderMoveRef.current = setInterval(invaderMoveTick, interval);
-    if (soundEnabled) {
-      stopMarch();
-      startMarch(updateMarch(alive, soundEnabled), soundEnabled);
-    }
+    invaderMoveRef.current = setInterval(invaderMoveTick, getInvaderInterval());
   }
 
   function startInvaderShoot() {
@@ -172,8 +171,8 @@ export default function SpaceInvadersScreen({ navigation, route }) {
   }
 
   function startUfoTimer() {
-    const delay = 15000 + Math.random() * 20000;
-    ufoTimerRef.current = setTimeout(spawnUfo, delay);
+    if (ufoTimerRef.current) clearTimeout(ufoTimerRef.current);
+    ufoTimerRef.current = setTimeout(spawnUfo, 15000 + Math.random() * 20000);
   }
 
   function spawnUfo() {
@@ -192,7 +191,7 @@ export default function SpaceInvadersScreen({ navigation, route }) {
     if (!state) return;
     const alive = state.invaders.filter(i => i.alive);
     if (alive.length === 0) return;
-    // prefer bottom-row invaders in each column
+    // Only bottom-row invader per column fires
     const byCol = {};
     for (const inv of alive) {
       if (!byCol[inv.col] || inv.row > byCol[inv.col].row) byCol[inv.col] = inv;
@@ -213,34 +212,32 @@ export default function SpaceInvadersScreen({ navigation, route }) {
     const alive = state.invaders.filter(i => i.alive);
     if (alive.length === 0) return;
 
+    // Play march note synced to movement
+    play(MARCH_NOTES[marchStepRef.current % 4]);
+    marchStepRef.current++;
+
     const leftmost = Math.min(...alive.map(i => i.x));
     const rightmost = Math.max(...alive.map(i => i.x + INVADER_W));
 
-    let stepped = false;
-    if (state.invaderDirX === 1 && rightmost >= SCREEN_W - 4) {
+    if (state.invaderDirX === 1 && rightmost >= SCREEN_W - 2) {
       state.invaders = state.invaders.map(i => ({ ...i, y: i.y + 8 }));
       state.invaderDirX = -1;
-      stepped = true;
-    } else if (state.invaderDirX === -1 && leftmost <= 4) {
+    } else if (state.invaderDirX === -1 && leftmost <= 2) {
       state.invaders = state.invaders.map(i => ({ ...i, y: i.y + 8 }));
       state.invaderDirX = 1;
-      stepped = true;
-    }
-
-    if (!stepped) {
-      const dx = state.invaderDirX * 4;
-      state.invaders = state.invaders.map(i => ({ ...i, x: i.x + dx }));
+    } else {
+      state.invaders = state.invaders.map(i => ({ ...i, x: i.x + state.invaderDirX * 4 }));
     }
     state.invaderPhase = (state.invaderPhase + 1) % 2;
 
-    // Game over if invaders reach player
     const lowestY = Math.max(...state.invaders.filter(i => i.alive).map(i => i.y + INVADER_H));
     if (lowestY >= state.playerY) {
       triggerGameOver();
       return;
     }
 
-    restartInvaderMove();
+    // Restart with updated interval (speeds up as invaders die)
+    startInvaderMove();
     setRenderTick(t => t + 1);
   }
 
@@ -251,7 +248,7 @@ export default function SpaceInvadersScreen({ navigation, route }) {
     const now = Date.now();
     const ctrl = controlsRef.current;
 
-    if (ctrl.left) state.playerX = Math.max(0, state.playerX - params.playerSpeed);
+    if (ctrl.left)  state.playerX = Math.max(0, state.playerX - params.playerSpeed);
     if (ctrl.right) state.playerX = Math.min(SCREEN_W - PLAYER_W, state.playerX + params.playerSpeed);
 
     // Fire
@@ -261,16 +258,16 @@ export default function SpaceInvadersScreen({ navigation, route }) {
         y: state.playerY,
       };
       state.lastFireTime = now;
-      if (soundEnabled) playSound('shoot');
+      play('shoot');
     }
 
-    // Move player bullet
+    // Move player bullet up
     if (state.playerBullet) {
       state.playerBullet.y -= 10;
       if (state.playerBullet.y < 0) state.playerBullet = null;
     }
 
-    // Move invader bullets
+    // Move invader bullets down
     state.invaderBullets = state.invaderBullets
       .map(b => ({ ...b, y: b.y + 4 }))
       .filter(b => b.y < FIELD_H);
@@ -284,10 +281,12 @@ export default function SpaceInvadersScreen({ navigation, route }) {
       }
     }
 
-    // Collisions: player bullet vs invaders
+    // Player bullet collisions
     if (state.playerBullet) {
-      let hit = false;
-      for (let i = 0; i < state.invaders.length; i++) {
+      let bulletConsumed = false;
+
+      // vs invaders
+      for (let i = 0; i < state.invaders.length && !bulletConsumed; i++) {
         const inv = state.invaders[i];
         if (!inv.alive) continue;
         if (overlap(state.playerBullet.x, state.playerBullet.y, BULLET_W, BULLET_H,
@@ -295,32 +294,36 @@ export default function SpaceInvadersScreen({ navigation, route }) {
           state.invaders[i] = { ...inv, alive: false };
           state.score += INVADER_POINTS[inv.type];
           state.playerBullet = null;
-          if (soundEnabled) playSound('explosion');
-          restartInvaderMove();
-          hit = true;
-          break;
+          bulletConsumed = true;
+          play('explosion');
+          startInvaderMove();
         }
       }
 
-      // Player bullet vs UFO
-      if (!hit && state.ufo && state.playerBullet) {
+      // vs UFO
+      if (!bulletConsumed && state.ufo) {
         if (overlap(state.playerBullet.x, state.playerBullet.y, BULLET_W, BULLET_H,
                     state.ufo.x, state.ufo.y, UFO_W, UFO_H)) {
           state.score += state.ufo.points;
           state.playerBullet = null;
+          bulletConsumed = true;
           state.ufo = null;
-          if (soundEnabled) playSound('ufoHit');
+          play('ufoHit');
           startUfoTimer();
         }
       }
 
-      // Player bullet vs bunkers
-      if (state.playerBullet) {
+      // vs bunkers (bullet comes from below → check bottom-up)
+      if (!bulletConsumed && state.playerBullet) {
         for (const bunker of state.bunkers) {
           if (overlap(state.playerBullet.x, state.playerBullet.y, BULLET_W, BULLET_H,
                       bunker.x, bunker.y, BUNKER_W, BUNKER_H)) {
-            hitBunker(bunker, state.playerBullet.x - bunker.x, state.playerBullet.y - bunker.y);
-            state.playerBullet = null;
+            const localX = state.playerBullet.x + BULLET_W / 2 - bunker.x;
+            const localY = state.playerBullet.y - bunker.y;
+            if (hitBunker(bunker, localX, localY)) {
+              state.playerBullet = null;
+              bulletConsumed = true;
+            }
             break;
           }
         }
@@ -331,11 +334,12 @@ export default function SpaceInvadersScreen({ navigation, route }) {
     if (now > state.invincibleUntil) {
       for (let i = state.invaderBullets.length - 1; i >= 0; i--) {
         const b = state.invaderBullets[i];
-        if (overlap(b.x, b.y, BULLET_W, BULLET_H, state.playerX, state.playerY, PLAYER_W, PLAYER_H)) {
+        if (overlap(b.x, b.y, BULLET_W, BULLET_H,
+                    state.playerX, state.playerY, PLAYER_W, PLAYER_H)) {
           state.invaderBullets.splice(i, 1);
           state.lives -= 1;
           state.invincibleUntil = now + 1500;
-          if (soundEnabled) playSound('playerHit');
+          play('playerHit');
           if (state.lives <= 0) { triggerGameOver(); return; }
         }
       }
@@ -346,8 +350,11 @@ export default function SpaceInvadersScreen({ navigation, route }) {
       const b = state.invaderBullets[bi];
       for (const bunker of state.bunkers) {
         if (overlap(b.x, b.y, BULLET_W, BULLET_H, bunker.x, bunker.y, BUNKER_W, BUNKER_H)) {
-          hitBunker(bunker, b.x - bunker.x, b.y - bunker.y);
-          state.invaderBullets.splice(bi, 1);
+          const localX = b.x + BULLET_W / 2 - bunker.x;
+          const localY = b.y - bunker.y;
+          if (hitBunker(bunker, localX, localY)) {
+            state.invaderBullets.splice(bi, 1);
+          }
           break;
         }
       }
@@ -357,29 +364,16 @@ export default function SpaceInvadersScreen({ navigation, route }) {
     if (state.invaders.filter(i => i.alive).length === 0) {
       const nextRound = state.round + 1;
       initState(nextRound, state.score, state.lives);
-      restartInvaderMove();
+      startInvaderMove();
     }
 
     setRenderTick(t => t + 1);
   }
 
-  function hitBunker(bunker, localX, localY) {
-    const BLOCK = 6;
-    const col = Math.floor(localX / BLOCK);
-    const row = Math.floor(localY / BLOCK);
-    // destroy hit block + adjacent blocks randomly for erosion effect
-    const toDestroy = [`${row}-${col}`, `${row - 1}-${col}`, `${row}-${col - 1}`, `${row}-${col + 1}`];
-    for (const key of toDestroy) {
-      if (bunker.blocks[key]) {
-        if (Math.random() > 0.4) bunker.blocks[key] = false;
-      }
-    }
-  }
-
   async function triggerGameOver() {
     stopAll();
+    play('gameover');
     const state = gs.current;
-    if (soundEnabled) playSound('gameover');
     const prev = await getHighscore();
     if (state.score > prev.score) {
       await saveHighscore(state.score, playerName || 'Unbekannt');
@@ -399,23 +393,36 @@ export default function SpaceInvadersScreen({ navigation, route }) {
     }
   }
 
+  function confirmQuit() {
+    stopAll();
+    navigation.navigate('Home');
+  }
+
   function restart() {
     stopAll();
     setIsNewHighscore(false);
+    marchStepRef.current = 0;
     initState(1);
     setGamePhase('playing');
     startAll();
   }
 
   const state = gs.current;
-  if (!state) return null;
+  if (!state || gamePhase === 'loading') {
+    return (
+      <SafeAreaView style={s.root}>
+        <View style={s.loadingCenter}>
+          <Text style={s.hudLabel}>LADEN...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const invincible = Date.now() < state.invincibleUntil;
-  const aliveCount = state.invaders.filter(i => i.alive).length;
 
   return (
     <SafeAreaView style={s.root}>
-      {/* HUD top */}
+      {/* HUD */}
       <View style={s.hud}>
         <View style={s.hudCol}>
           <Text style={s.hudLabel}>SCORE</Text>
@@ -425,69 +432,58 @@ export default function SpaceInvadersScreen({ navigation, route }) {
           <Text style={s.hudLabel}>HI-SCORE</Text>
           <Text style={s.hudValue}>{String(Math.max(hiScore, state.score)).padStart(4, '0')}</Text>
         </View>
-        <TouchableOpacity onPress={togglePause} style={s.hudCol}>
-          <Text style={s.hudLabel}>RUNDE {state.round}</Text>
-          <Text style={s.hudValue}>{gamePhase === 'paused' ? '▶ WEITER' : '⏸ PAUSE'}</Text>
-        </TouchableOpacity>
+        <View style={s.hudCol}>
+          <Text style={s.hudLabel}>{'♥ '.repeat(state.lives).trim()}</Text>
+          <Text style={s.hudValue}>RND {state.round}</Text>
+        </View>
       </View>
 
       {/* Field */}
       <View style={s.field}>
-        {/* UFO */}
         {state.ufo && (
           <View style={{ position: 'absolute', left: state.ufo.x, top: state.ufo.y }}>
             <Ufo />
           </View>
         )}
 
-        {/* Invaders */}
         {state.invaders.map(inv => inv.alive && (
           <View key={inv.id} style={{ position: 'absolute', left: inv.x, top: inv.y }}>
             <Invader type={inv.type} phase={state.invaderPhase} />
           </View>
         ))}
 
-        {/* Bunkers */}
         {state.bunkers.map(bunker => (
           <View key={bunker.id} style={{ position: 'absolute', left: bunker.x, top: bunker.y }}>
             <Bunker blocks={bunker.blocks} />
           </View>
         ))}
 
-        {/* Player bullet */}
         {state.playerBullet && (
           <View style={[s.bullet, s.playerBullet, { left: state.playerBullet.x, top: state.playerBullet.y }]} />
         )}
 
-        {/* Invader bullets */}
         {state.invaderBullets.map(b => (
           <View key={b.id} style={[s.bullet, s.invaderBullet, { left: b.x, top: b.y }]} />
         ))}
 
-        {/* Player */}
         <View style={{ position: 'absolute', left: state.playerX, top: state.playerY }}>
           <PlayerShip invincible={invincible} />
         </View>
 
-        {/* Ground line */}
         <View style={[s.groundLine, { top: state.playerY + PLAYER_H + 2 }]} />
 
-        {/* HUD bottom: lives */}
-        <View style={[s.livesRow, { top: state.playerY + PLAYER_H + 6 }]}>
-          <Text style={s.livesLabel}>{state.lives} </Text>
-          {Array.from({ length: state.lives }).map((_, i) => (
-            <View key={i} style={s.lifeIcon} />
-          ))}
-        </View>
-
-        {/* Pause overlay */}
         {gamePhase === 'paused' && (
           <View style={s.overlay}>
             <Text style={s.overlayTitle}>PAUSE</Text>
+            <TouchableOpacity style={s.overlayBtn} onPress={togglePause}>
+              <Text style={s.overlayBtnText}>WEITER</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.overlayBtn, s.menuBtn]} onPress={confirmQuit}>
+              <Text style={[s.overlayBtnText, { color: '#aaa' }]}>MENÜ</Text>
+            </TouchableOpacity>
           </View>
         )}
 
-        {/* Game Over overlay */}
         {gamePhase === 'gameover' && (
           <View style={s.overlay}>
             <Text style={s.overlayTitle}>GAME OVER</Text>
@@ -496,25 +492,37 @@ export default function SpaceInvadersScreen({ navigation, route }) {
             <TouchableOpacity style={s.overlayBtn} onPress={restart}>
               <Text style={s.overlayBtnText}>NOCHMAL</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.overlayBtn, s.menuBtn]} onPress={() => navigation.navigate('Home')}>
+            <TouchableOpacity style={[s.overlayBtn, s.menuBtn]} onPress={confirmQuit}>
               <Text style={[s.overlayBtnText, { color: '#aaa' }]}>MENÜ</Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
 
-      <GameController controlsRef={controlsRef} handedness={handedness} />
+      {/* Controller with pause & menu buttons */}
+      <View style={s.controllerRow}>
+        <View style={s.sideButtons}>
+          <TouchableOpacity style={s.sideBtn} onPress={togglePause}>
+            <Text style={s.sideBtnText}>{gamePhase === 'paused' ? '▶' : '⏸'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.sideBtn, s.exitBtn]} onPress={confirmQuit}>
+            <Text style={[s.sideBtnText, { color: '#888' }]}>✕</Text>
+          </TouchableOpacity>
+        </View>
+        <GameController controlsRef={controlsRef} handedness={handedness} />
+      </View>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
+  loadingCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   hud: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 6, borderBottomWidth: 1, borderColor: '#0a2a0a' },
   hudCol: { alignItems: 'center', flex: 1 },
   hudLabel: { color: '#0f0', fontFamily: 'monospace', fontSize: 10, letterSpacing: 1 },
-  hudValue: { color: '#fff', fontFamily: 'monospace', fontSize: 16, fontWeight: 'bold' },
+  hudValue: { color: '#fff', fontFamily: 'monospace', fontSize: 15, fontWeight: 'bold' },
 
   field: { width: SCREEN_W, height: FIELD_H, overflow: 'hidden' },
 
@@ -523,9 +531,6 @@ const s = StyleSheet.create({
   invaderBullet: { backgroundColor: '#ff4444' },
 
   groundLine: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: '#00aa00' },
-  livesRow: { position: 'absolute', left: 8, flexDirection: 'row', alignItems: 'center' },
-  livesLabel: { color: '#0f0', fontFamily: 'monospace', fontSize: 12 },
-  lifeIcon: { width: 16, height: 10, backgroundColor: '#00ff00', borderRadius: 2, marginRight: 4 },
 
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)', alignItems: 'center', justifyContent: 'center', gap: 16 },
   overlayTitle: { color: '#0f0', fontFamily: 'monospace', fontSize: 30, fontWeight: 'bold', letterSpacing: 4 },
@@ -534,4 +539,10 @@ const s = StyleSheet.create({
   overlayBtn: { borderWidth: 2, borderColor: '#0f0', borderRadius: 4, paddingHorizontal: 28, paddingVertical: 10 },
   menuBtn: { borderColor: '#444' },
   overlayBtnText: { color: '#0f0', fontFamily: 'monospace', fontSize: 18, fontWeight: 'bold' },
+
+  controllerRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#050505', borderTopWidth: 1, borderColor: '#0a2a0a' },
+  sideButtons: { flexDirection: 'column', gap: 6, paddingLeft: 8, paddingVertical: 8 },
+  sideBtn: { width: 36, height: 36, borderWidth: 1, borderColor: '#333', borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  exitBtn: { borderColor: '#2a2a2a' },
+  sideBtnText: { color: '#0f0', fontFamily: 'monospace', fontSize: 16 },
 });
