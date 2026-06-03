@@ -78,11 +78,11 @@ function spawnBarrel(round) {
   return {
     id: Date.now() + Math.random(),
     x: KONG_X + KONG_W_PX / 2,
-    y: KONG_Y,
+    y: PLATFORMS[4].y - BARREL_SIZE,
     vx: barrelSpeed(round) * PLATFORMS[4].rollDir,
     vy: 0,
-    onGround: false,
-    platId: null,
+    onGround: true,
+    platId: 4,
     ladderFall: null,
     scored: false,
   };
@@ -418,52 +418,54 @@ export default function DonkeyKongScreen({ navigation, route }) {
       const offLeft  = b.x < plat.x;
       const offRight = b.x + BARREL_SIZE > plat.x + plat.width;
 
-      if (offLeft || offRight) {
-        // Check for ladder to fall through
+      if (!offLeft && !offRight) {
+        // Still rolling on platform – check if barrel is over a ladder
         const barrelCX = b.x + BARREL_SIZE / 2;
         const nearLad = LADDERS.find(l => {
           const ladCX = l.x + LADDER_W / 2;
-          return Math.abs(barrelCX - ladCX) < LADDER_W + 4 &&
-                 Math.abs(l.bottomY - plat.y) < PLAT_H + 2;
+          return Math.abs(barrelCX - ladCX) < LADDER_W * 0.8 &&
+                 Math.abs(l.topY - plat.y) < PLAT_H + 2;
         });
-
-        if (nearLad && b.platId > 0 && Math.random() < ladderFallChance(round)) {
+        if (nearLad && b.platId > 0 && Math.random() < ladderFallChance(round) / 8) {
           b.x = nearLad.x + (LADDER_W - BARREL_SIZE) / 2;
           b.ladderFall = nearLad.id;
           b.onGround = false;
           b.platId = null;
           b.vx = 0;
-        } else {
-          // Fall off edge
-          b.onGround = false;
-          b.platId = null;
-          b.vy = 0;
         }
-      }
-    } else {
-      // In air – apply both gravity and horizontal momentum
-      b.vy = Math.min(b.vy + GRAVITY, MAX_FALL);
-      b.y += b.vy;
-      b.x += b.vx;
-
-      let landed = false;
-      for (const plat of PLATFORMS) {
-        if (b.x + BARREL_SIZE > plat.x && b.x < plat.x + plat.width) {
-          const prev = b.y + BARREL_SIZE - b.vy;
-          if (b.vy >= 0 && prev <= plat.y + 2 && b.y + BARREL_SIZE >= plat.y) {
-            b.y = plat.y - BARREL_SIZE;
-            b.vy = 0;
-            b.onGround = true;
-            b.platId = plat.id;
-            b.vx = barrelSpeed(round) * plat.rollDir;
-            landed = true;
-            break;
-          }
-        }
+        return;
       }
 
-      if (!landed && b.y > FIELD_H + 40) b.remove = true;
+      // Fell off edge – drop vertically (no horizontal momentum)
+      b.onGround = false;
+      b.platId = null;
+      b.vy = 0;
+      b.vx = 0;
+      return;
     }
+
+    // In air
+    b.vy = Math.min(b.vy + GRAVITY, MAX_FALL);
+    b.y += b.vy;
+    b.x += b.vx;
+
+    let landed = false;
+    for (const plat of PLATFORMS) {
+      if (b.x + BARREL_SIZE > plat.x && b.x < plat.x + plat.width) {
+        const prev = b.y + BARREL_SIZE - b.vy;
+        if (b.vy >= 0 && prev <= plat.y + 2 && b.y + BARREL_SIZE >= plat.y) {
+          b.y = plat.y - BARREL_SIZE;
+          b.vy = 0;
+          b.onGround = true;
+          b.platId = plat.id;
+          b.vx = barrelSpeed(round) * plat.rollDir;
+          landed = true;
+          break;
+        }
+      }
+    }
+
+    if (!landed && b.y > FIELD_H + 40) b.remove = true;
   }
 
   async function triggerGameOver() {
